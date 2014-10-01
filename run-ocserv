@@ -1,0 +1,77 @@
+#!/bin/bash
+
+#
+# Run the OpenConnect server normally
+#
+
+function generate_ca() {
+	certtool --generate-privkey --outfile ca-key.pem
+	cat <<_EOF_> ca.tmpl
+cn = "ocserv-in-docker"
+organization = ocserv-in-docker"
+serial = 1
+expiration_days = 9999
+ca
+signing_key
+cert_signing_key
+crl_signing_key
+_EOF_
+	certtool --generate-self-signed --load-privkey ca-key.pem --template ca.tmpl --outfile ca-cert.pem
+}
+
+
+function generate_server_key() {
+	certtool --generate-privkey --outfile server-key.pem
+	cat <<_EOF_> server.tmpl
+cn = "ocserv-in-docer"
+organization = "ocserv-in-docker"
+serial = 2
+expiration_days = 9999
+signing_key
+encryption_key
+tls_www_server
+_EOF_
+	certtool --generate-certificate --load-privkey server-key.pem --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem --template server.tmpl --outfile server-cert.pem
+}
+
+function generate_user_key() {
+	certtool --generate-privkey --outfile user-key.pem
+	cat <<_EOF_>user.tmpl
+cn = "ocserv"
+unit = "docker"
+serial = 1
+expiration_days = 3650
+signing_key
+tls_www_client
+_EOF_
+	certtool --generate-certificate --load-privkey user-key.pem --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem --template user.tmpl --outfile user-cert.pem
+	# generate p12 certificate
+	openssl pkcs12 -export -inkey user-key.pem -in user-cert.pem -name "ocserv-in-docker" -certfile ca-cert.pem -caname "ocserv-in-docker" -out client.cert.p12
+}
+
+
+sysctl -w net.ipv4.ip_forward=1 \
+	&& iptables -t nat -F \
+	&& iptables -t nat -A POSTROUTING -j MASQUERADE \
+	&& iptables -F FORWARD \
+	&& iptables -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+
+if ! [ -f ocserv.conf ]; then
+	# generate CA
+	generate_ca
+
+	# generate server key
+	generate_server_key
+
+	# generate user key
+	#generate_user_key
+
+	cp /ocserv-template/ocserv.conf .
+	for u in ${OCSERV_USERS}; do
+		user=`echo $u | cut -d: -f1`
+		pass=`echo $u | cut -d: -f2`
+		yes $pass | ocpasswd -c ocserv.passwd $user
+	done
+fi
+
+ocserv -c /ocserv/ocserv.conf -f -d1
