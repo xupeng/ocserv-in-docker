@@ -74,4 +74,4 @@ if ! [ -f ocserv.conf ]; then
 	done
 fi
 
-ocserv -c /ocserv/ocserv.conf -f -d1
+exec ocserv -c /ocserv/ocserv.conf -f $*
