@@ -33,8 +33,10 @@ RUN mkdir -p /tmp/ocserv \
 	&& make install \
 	&& rm -rf /tmp/ocserv
 
-CMD mkdir -p /dev/net && [ -c /dev/net/tun ] || mknod /dev/net/tun c 10 200 && chmod 600 /dev/net/tun
+RUN mkdir -p /dev/net && [ -c /dev/net/tun ] || mknod /dev/net/tun c 10 200 && chmod 600 /dev/net/tun
 
 WORKDIR /ocserv
 COPY run-ocserv /usr/local/sbin/run-ocserv
 COPY ocserv.conf /ocserv-template/ocserv.conf
+
+CMD ["run-ocserv"]

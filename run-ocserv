@@ -68,10 +68,15 @@ if ! [ -f ocserv.conf ]; then
 
 	cp /ocserv-template/ocserv.conf .
 	for u in ${OCSERV_USERS}; do
-		user=`echo $u | cut -d: -f1`
-		pass=`echo $u | cut -d: -f2`
-		yes $pass | ocpasswd -c ocserv.passwd $user
+		user=`echo ${u} | cut -d: -f1`
+		passwd=`echo ${u} | cut -d: -f2`
+		yes ${passwd} | ocpasswd -c ocserv.passwd ${user}
 	done
+	if ! [ -f ocserv.passwd ]; then
+		passwd=${RANDOM}
+		yes ${passwd} | ocpasswd -c ocserv.passwd ocserv
+		echo -e "\nDefault user is \"ocserv\", its password is \"${passwd}\"\n"
+	fi
 fi
 
 exec ocserv -c /ocserv/ocserv.conf -f $*
