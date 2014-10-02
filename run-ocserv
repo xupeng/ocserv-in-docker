@@ -7,8 +7,8 @@
 function generate_ca() {
 	certtool --generate-privkey --outfile ca-key.pem
 	cat <<_EOF_> ca.tmpl
-cn = "ocserv-in-docker"
-organization = ocserv-in-docker"
+cn = "${OCSERV_CA_CN:-ocserv CA}"
+organization = "${OCSERV_ORGANIZATION:-ocserv organization}"
 serial = 1
 expiration_days = 9999
 ca
@@ -23,8 +23,8 @@ _EOF_
 function generate_server_key() {
 	certtool --generate-privkey --outfile server-key.pem
 	cat <<_EOF_> server.tmpl
-cn = "ocserv-in-docer"
-organization = "ocserv-in-docker"
+cn = "${OCSERV_SERVER_CN:-ocserv server}"
+organization = "${OCSERV_ORGANIZATION:-ocserv organization}"
 serial = 2
 expiration_days = 9999
 signing_key
@@ -37,16 +37,16 @@ _EOF_
 function generate_user_key() {
 	certtool --generate-privkey --outfile user-key.pem
 	cat <<_EOF_>user.tmpl
-cn = "ocserv"
-unit = "docker"
-serial = 1
-expiration_days = 3650
+cn = "${OCSERV_USER_CN:-client}"
+unit = "admins"
+serial = 1000
+expiration_days = 9999
 signing_key
 tls_www_client
 _EOF_
 	certtool --generate-certificate --load-privkey user-key.pem --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem --template user.tmpl --outfile user-cert.pem
 	# generate p12 certificate
-	openssl pkcs12 -export -inkey user-key.pem -in user-cert.pem -name "ocserv-in-docker" -certfile ca-cert.pem -caname "ocserv-in-docker" -out client.cert.p12
+	openssl pkcs12 -export -inkey user-key.pem -in user-cert.pem -name "${OCSERV_USER_CN:-client}" -certfile ca-cert.pem -caname "${OCSERV_CA_CN:-ocserv CA}" -out client.cert.p12
 }
 
 
@@ -64,7 +64,7 @@ if ! [ -f ocserv.conf ]; then
 	generate_server_key
 
 	# generate user key
-	#generate_user_key
+	# generate_user_key
 
 	cp /ocserv-template/ocserv.conf .
 	for u in ${OCSERV_USERS}; do
