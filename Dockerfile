@@ -1,6 +1,9 @@
 FROM debian:wheezy
 MAINTAINER xupeng recordus@gmail.com
 
+ENV PATH /usr/local/sbin:/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin
+ENV OCSERV_VERSION 0.8.4
+
 RUN echo deb http://http.debian.net/debian wheezy-backports main >> /etc/apt/sources.list
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
 		curl \
@@ -10,20 +13,13 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
 		vim-nox \
 		build-essential \
 		pkg-config \
+		openssl \
 	&& apt-get install -t wheezy-backports -y \
 		libgnutls28-dev \
 		libreadline6-dev \
 		gnutls-bin \
-	&& apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-ENV PATH /usr/local/sbin:/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin
-ENV OCSERV_VERSION 0.8.4
-
-RUN mkdir -p /ocserv
-VOLUME ["/ocserv"]
-EXPOSE 443
-
-RUN mkdir -p /tmp/ocserv \
+	&& mkdir -p /ocserv \
+	&& mkdir -p /tmp/ocserv \
 	&& cd /tmp/ocserv \
 	&& curl -SL ftp://ftp.infradead.org/pub/ocserv/ocserv-${OCSERV_VERSION}.tar.xz 2>/dev/null | tar -xJ \
 	&& ls /tmp/ocserv \
@@ -31,9 +27,16 @@ RUN mkdir -p /tmp/ocserv \
 	&& ./configure \
 	&& make \
 	&& make install \
-	&& rm -rf /tmp/ocserv
+	&& rm -rf /tmp/ocserv \
+	&& apt-get purge -y build-essential curl \
+	&& apt-get autoremove -y \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN mkdir -p /dev/net && [ -c /dev/net/tun ] || mknod /dev/net/tun c 10 200 && chmod 600 /dev/net/tun
+
+VOLUME ["/ocserv"]
+EXPOSE 443
 
 WORKDIR /ocserv
 COPY run-ocserv /usr/local/sbin/run-ocserv
