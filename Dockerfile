@@ -33,8 +33,6 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN mkdir -p /dev/net && [ -c /dev/net/tun ] || mknod /dev/net/tun c 10 200 && chmod 600 /dev/net/tun
-
 VOLUME ["/ocserv"]
 EXPOSE 443
 
